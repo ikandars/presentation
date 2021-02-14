@@ -17,7 +17,7 @@ Pengenalan tentang containerized application
     * Docker Swarm
     * Kubernetes
 
-## Dockerfile Commands
+## Dockerfile Instructions
 * FROM - directive untuk menentukan base image yang digunakan ketika build image
 * ENV - directive untuk menentukan environment variable yang digunakan oleh aplikasi
 * RUN - directive untuk menjalankan perintah linux
@@ -26,6 +26,10 @@ Pengenalan tentang containerized application
 
 ```Dockerfile
 FROM php:cli
+
+ADD ./index.php ./
+
+CMD php -S 0.0.0.0:8082 -t ./
 
 ```
 ## Perintah-perintah dasar:
@@ -59,13 +63,13 @@ docker run --rm --name hello-simple-php -p 8081:8082 localhost:5000/hello-simple
 Merubah tag sebuah image:
 
 ```bash
-docker tag localhost:5000/hello-simple-php:latest ikandars/hello-simple-php:latest
+docker tag localhost:5000/hello-simple-php:latest docker.io/ikandars/hello-simple-php:latest
 ```
 
 Push image ke public registry:
 
 ```bash
-ikandars/hello-simple-php:latest
+docker push ikandars/hello-simple-php:latest
 ```
 
 ## Konsep mengenai stateless vs stateful application
@@ -85,6 +89,49 @@ ikandars/hello-simple-php:latest
 * Goal: Menjaga durability data pada lingkungan terdistribusi.
 * Umumnya stateful application memiliki fitur replikasi.
 
+# Stateful Application Example:
+
+```bash
+docker run --name mysql-server \
+-e MYSQL_ROOT_PASSWORD=my-secret-pw \
+-e MYSQL_PASSWORD=my-secret-pw \
+-e MYSQL_DATABASE=my-db \
+-e MYSQL_USER=db-user \
+-v mysql-server:/var/lib/mysql \
+--network my-network-demo \
+-d \
+mysql:8
+```
+
+# Networking
+
+Melihat existing network
+
+```bash
+docker network ls
+```
+
+Membuat network baru:
+
+```bash
+docker network create my-network-demo
+```
+
+Attache sebuah container ke sebuah network:
+
+```bash
+docker network connect my-network-demo mysql-server
+```
+
+```bash
+docker run \
+-d \
+--rm \
+--name simple-python \
+-p 8082:80 \
+--network my-network-demo \
+localhost:5000/simple-python:latest
+```
 
 
 
