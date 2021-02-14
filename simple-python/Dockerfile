@@ -3,6 +3,8 @@ FROM python:3.9
 COPY ./requirements.txt .
 RUN pip install -r requirements.txt
 
+# RUN apt-get install default-mysql-client
+
 ENV PORT 80
 ENV PYTHONPATH ./
 ENV LANG en_US.UTF-8
