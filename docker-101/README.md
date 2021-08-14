@@ -1,6 +1,8 @@
 # Docker 101
 Pengenalan tentang containerized application
 
+https://docs.google.com/presentation/d/1Er8V9p4fybi3AlRZ-GUMbeEC6LupWQ6C-jVH9fEZ3G0/edit?usp=sharing
+
 ## Prasyarat untuk Bekerja dengan Docker
 * Memahami konsep dasar perintah-perintah di Linux.
 * Memahami konsep dasar networking.

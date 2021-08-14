@@ -1,0 +1,148 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: regcred
+data:
+  .dockerconfigjson: ewoJImF1dGhzIjogewoJCSJyZWdpc3RyeS5naXRsYWIuY29tIjogewoJCQkiYXV0aCI6ICJkWE5sY201aGJXVTZjR0Z6YzNkdmNtUT0iCgkJfQoJfQp9Cg==
+type: kubernetes.io/dockerconfigjson
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+data:
+  default.conf: |
+    client_max_body_size 10M;
+
+    upstream php_backend {
+        server  localhost:9000;
+    }
+
+    server {
+        listen      80;
+        server_name localhost;
+
+        proxy_set_header    Host                        $host;
+        proxy_set_header    Accept-Encoding             "";
+        proxy_set_header    X-Forwarded-Host            $host:$server_port;
+        proxy_set_header    X-Forwarded-Server          $server_name;
+        proxy_set_header    X-Forwarded-For             $remote_addr;
+        proxy_set_header    X-Forwarded-Request-Uri     $request_uri;
+        proxy_set_header    X-Forwarded-Script-Uri      $scheme://$host$uri;
+        proxy_set_header    X-Forwarded-Script-Name     $uri;
+        proxy_set_header    X-Forwarded-Https           on;
+
+        root /var/www/html/public;
+        index index.php index.html;
+
+        location / {
+            try_files $uri/ /index.php?$args;
+        }
+
+        location ~ \.php$ {
+            include fastcgi.conf;
+            fastcgi_intercept_errors on;
+            fastcgi_pass php_backend;
+            fastcgi_buffers 16 16k;
+            fastcgi_buffer_size 32k;
+            fastcgi_read_timeout 300;
+        }
+
+        location ~* \.(js|css|png|jpg|jpeg|gif|ico|json|woff2|woff|ttf|map)$ {
+            expires max;
+            log_not_found off;
+        }
+    }
+---
+apiVersion: v1
+metadata:
+  name: web-secret
+data:
+  APP_NAME: TGFyYXZlbA== #Laravel
+  APP_ENV: bG9jYWw= #local
+  APP_KEY: YmFzZTY0OjN5TCt6TE9yOWtBeFdhRUtoMm9zQnVFSUphZVQwTkhnNkdXT1pJNVpETDA9 #base64:3yL+zLOr9kAxWaEKh2osBuEIJaeT0NHg6GWOZI5ZDL0=
+  APP_DEBUG: dHJ1ZQ== #"true"
+  APP_URL: aHR0cDovL2dhbGxlcnktYXBwLnRlc3Q= #http://gallery-app.test
+  LOG_CHANNEL: c3RhY2s= #stack
+  LOG_LEVEL: ZGVidWc= #debug
+  DB_CONNECTION: bXlzcWw= # mysql
+  DB_HOST: MTkyLjE2OC4xLjEz #192.168.1.13
+  DB_PORT: MzMwNA== #"3304"
+  DB_DATABASE: Z2FsbGVyeV9hcHA= # gallery_app
+  DB_USERNAME: Z2FsbGVyeS1hcHA= #gallery-app
+  DB_PASSWORD: Z2FsbGVyeS1hcHA= #gallery-app
+  AWS_ACCESS_KEY_ID: Z2FsbGVyeS1hcHA= # gallery-app
+  AWS_SECRET_ACCESS_KEY: Z2FsbGVyeS1hcHA= # gallery-app
+  AWS_DEFAULT_REGION: dXMtZWFzdC0x #us-east-1
+  AWS_BUCKET: cGhvdG9z # photos
+  AWS_USE_PATH_STYLE_ENDPOINT: dHJ1ZQ== #"true"
+  AWS_ENDPOINT: aHR0cDovLzE5Mi4xNjguMS4xMzo5MDAx # http://192.168.1.13:9001
+kind: Secret
+type: Opaque
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gallery-app
+  labels:
+    app: gallery-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gallery-app
+  template:
+    metadata:
+      labels:
+        app: gallery-app
+    spec:
+      containers:
+      - name: gallery-app
+        image: registry.gitlab.com/ikandars/gallery-app:v0.0.1
+        imagePullPolicy: Never
+        envFrom:
+          - secretRef:
+              name: web-secret
+        ports:
+        - containerPort: 9000
+        resources:
+          requests:
+            memory: "500Mi"
+            cpu: "1"
+          limits:
+            memory: "500Mi"
+            cpu: "1"
+      - name: nginx
+        image: nginx:1.13-alpine-perl
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: "500Mi"
+            cpu: "1"
+          limits:
+            memory: "500Mi"
+            cpu: "1"
+        volumeMounts:
+        - name: config
+          mountPath: "/etc/nginx/conf.d"
+          readOnly: true
+      imagePullSecrets:
+      - name: regcred
+      volumes:
+      - name: config
+        configMap:
+          name: nginx-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gallery-app
+  labels:
+    app: gallery-app-svc
+spec:
+  ports:
+    - port: 80
+      name: http
+  selector:
+    app: gallery-app
